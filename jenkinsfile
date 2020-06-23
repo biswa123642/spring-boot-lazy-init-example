@@ -1,30 +1,24 @@
-agent {
-    kubernetes {
-        label podlabel
-        yaml """
-kind: Pod
-metadata:
-  name: jenkins-agent
-spec:
-  containers:
-  - name: kaniko
-    image: gcr.io/kaniko-project/executor:debug
-    imagePullPolicy: Always
-    command:
-    - /busybox/cat
-    tty: true
-    volumeMounts:
-      - name: aws-secret
-        mountPath: /root/.aws/
-      - name: docker-registry-config
-        mountPath: /kaniko/.docker
-  restartPolicy: Never
-  volumes:
-    - name: aws-secret
-      secret:
-        secretName: aws-secret
-    - name: docker-registry-config
-      configMap:
-        name: docker-registry-config
-"""
-   }
+pipeline { 
+    agent any 
+    options {
+        skipStagesAfterUnstable()
+    }
+    stages {
+        stage('Build') { 
+            steps { 
+                sh 'make' 
+            }
+        }
+        stage('Test'){
+            steps {
+                sh 'make check'
+                junit 'reports/**/*.xml' 
+            }
+        }
+        stage('Deploy') {
+            steps {
+                sh 'make publish'
+            }
+        }
+    }
+}
